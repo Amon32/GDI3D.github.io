@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Figuras 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            display: block;
+        }
+        button {
+            position: absolute;
+            bottom: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="generarFigura()">Generar Figura 3D</button>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+    <script>
+        // Escena, cámara y renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Área de recorte (límites del espacio 3D)
+        const clipArea = {
+            x: { min: -5, max: 5 },
+            y: { min: -5, max: 5 },
+            z: { min: -5, max: 5 }
+        };
+
+        // Luz ambiental
+        const light = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(light);
+
+        // Luz direccional
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 10, 10);
+        scene.add(directionalLight);
+
+        // Posición de la cámara
+        camera.position.z = 15;
+
+        // Lista de figuras para rotar
+        const figurasEnEscena = [];
+
+        // Función para generar un color aleatorio
+        function getRandomColor() {
+            return new THREE.Color(Math.random(), Math.random(), Math.random());
+        }
+
+        // Función para generar una posición aleatoria dentro del área de recorte
+        function getRandomPosition() {
+            const x = THREE.MathUtils.randFloat(clipArea.x.min, clipArea.x.max);
+            const y = THREE.MathUtils.randFloat(clipArea.y.min, clipArea.y.max);
+            const z = THREE.MathUtils.randFloat(clipArea.z.min, clipArea.z.max);
+            return new THREE.Vector3(x, y, z);
+        }
+
+        // Función para generar una figura 3D aleatoria
+        function generarFigura() {
+            const figuras = ['cubo', 'esfera', 'cono'];
+            const figuraAleatoria = figuras[Math.floor(Math.random() * figuras.length)];
+            const color = getRandomColor();
+            const posicion = getRandomPosition();
+
+            let geometria;
+            switch (figuraAleatoria) {
+                case 'cubo':
+                    geometria = new THREE.BoxGeometry(2, 2, 2);
+                    break;
+                case 'esfera':
+                    geometria = new THREE.SphereGeometry(1, 32, 32);
+                    break;
+                case 'cono':
+                    geometria = new THREE.ConeGeometry(1, 2, 32);
+                    break;
+            }
+
+            const material = new THREE.MeshPhongMaterial({ color });
+            const figura = new THREE.Mesh(geometria, material);
+            figura.position.copy(posicion);
+
+            // Añadir rotación inicial aleatoria
+            figura.rotation.x = Math.random() * Math.PI * 2;
+            figura.rotation.y = Math.random() * Math.PI * 2;
+            figura.rotation.z = Math.random() * Math.PI * 2;
+
+            // Añadir la figura a la escena y a la lista de figuras
+            scene.add(figura);
+            figurasEnEscena.push(figura);
+        }
+
+        // Animación
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotar todas las figuras en la escena
+            figurasEnEscena.forEach(figura => {
+                figura.rotation.x += 0.01;
+                figura.rotation.y += 0.01;
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Manejo del redimensionamiento de la ventana
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
