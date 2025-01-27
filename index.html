@@ -5,117 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador de Figuras 3D</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
-        canvas {
-            display: block;
-        }
-        button {
-            position: absolute;
-            bottom: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            z-index: 1;
-        }
+        body { margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+        canvas { display: block; }
+        button { position: absolute; bottom: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; z-index: 1; }
     </style>
 </head>
 <body>
-    <button onclick="generarFigura()">Generar Figura 3D</button>
+    <button onclick="generador.generarFigura()">Generar Figura 3D</button>
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
     <script>
-        // Escena, cámara y renderer
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        class Figura3D {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.figurasEnEscena = [];
+                this.init();
+            }
 
-        // Área de recorte (límites del espacio 3D)
-        const clipArea = {
-            x: { min: -5, max: 5 },
-            y: { min: -5, max: 5 },
-            z: { min: -5, max: 5 }
-        };
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(this.renderer.domElement);
+                this.setupLuces();
+                this.setupCamara();
+                this.animate();
+            }
 
-        // Luces
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
+            setupLuces() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(10, 10, 10);
-        scene.add(directionalLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(10, 10, 10);
+                this.scene.add(directionalLight);
+            }
 
-        // Posición de la cámara
-        camera.position.z = 15;
+            setupCamara() {
+                this.camera.position.z = 15;
+            }
 
-        // Lista de figuras para rotar
-        const figurasEnEscena = [];
+            generarFigura() {
+                const geometrias = {
+                    cubo: new THREE.BoxGeometry(2, 2, 2),
+                    esfera: new THREE.SphereGeometry(1, 32, 32),
+                    cono: new THREE.ConeGeometry(1, 2, 32)
+                };
+                const figuraAleatoria = Object.keys(geometrias)[Math.floor(Math.random() * Object.keys(geometrias).length)];
+                const geometria = geometrias[figuraAleatoria];
+                const color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                const posicion = new THREE.Vector3(
+                    THREE.MathUtils.randFloat(-5, 5),
+                    THREE.MathUtils.randFloat(-5, 5),
+                    THREE.MathUtils.randFloat(-5, 5)
+                );
 
-        // Función para generar un color aleatorio
-        const getRandomColor = () => new THREE.Color(Math.random(), Math.random(), Math.random());
+                const material = new THREE.MeshPhongMaterial({ color });
+                const figura = new THREE.Mesh(geometria, material);
+                figura.position.copy(posicion);
+                figura.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
 
-        // Función para generar una posición aleatoria dentro del área de recorte
-        const getRandomPosition = () => new THREE.Vector3(
-            THREE.MathUtils.randFloat(clipArea.x.min, clipArea.x.max),
-            THREE.MathUtils.randFloat(clipArea.y.min, clipArea.y.max),
-            THREE.MathUtils.randFloat(clipArea.z.min, clipArea.z.max)
-        );
+                this.scene.add(figura);
+                this.figurasEnEscena.push(figura);
 
-        // Función para generar una figura 3D aleatoria
-        const generarFigura = () => {
-            const figuras = [
-                { tipo: 'cubo', geometria: new THREE.BoxGeometry(2, 2, 2) },
-                { tipo: 'esfera', geometria: new THREE.SphereGeometry(1, 32, 32) },
-                { tipo: 'cono', geometria: new THREE.ConeGeometry(1, 2, 32) }
-            ];
-            const figuraAleatoria = figuras[Math.floor(Math.random() * figuras.length)];
-            const color = getRandomColor();
-            const posicion = getRandomPosition();
+                if (this.figurasEnEscena.length > 20) {
+                    const figuraRemovida = this.figurasEnEscena.shift();
+                    this.scene.remove(figuraRemovida);
+                }
+            }
 
-            const material = new THREE.MeshPhongMaterial({ color });
-            const figura = new THREE.Mesh(figuraAleatoria.geometria, material);
-            figura.position.copy(posicion);
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.figurasEnEscena.forEach(figura => {
+                    figura.rotation.x += 0.01;
+                    figura.rotation.y += 0.01;
+                });
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
 
-            // Añadir rotación inicial aleatoria
-            figura.rotation.set(
-                Math.random() * Math.PI * 2,
-                Math.random() * Math.PI * 2,
-                Math.random() * Math.PI * 2
-            );
-
-            // Añadir la figura a la escena y a la lista de figuras
-            scene.add(figura);
-            figurasEnEscena.push(figura);
-        };
-
-        // Animación
-        const animate = () => {
-            requestAnimationFrame(animate);
-
-            // Rotar todas las figuras en la escena
-            figurasEnEscena.forEach(figura => {
-                figura.rotation.x += 0.01;
-                figura.rotation.y += 0.01;
-            });
-
-            renderer.render(scene, camera);
-        };
-        animate();
-
-        // Manejo del redimensionamiento de la ventana
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        const generador = new Figura3D();
     </script>
 </body>
 </html>
